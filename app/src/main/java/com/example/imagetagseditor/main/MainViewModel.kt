@@ -27,10 +27,10 @@ class MainViewModel : ViewModel() {
     var healthConnectClient: HealthConnectClient? = null
     var healthData = HealthData()
     var tempHealthData = HealthData()
-    var idsToUpdate = emptySet<String>().toMutableSet()
+    //var idsToUpdate = emptySet<String>().toMutableSet()
     var idsToDelete = emptySet<String>().toMutableSet()
 
-    private val timeRange: Long = 7 * 86400
+    private val timeRange: Long = 30 * 86400
 
     fun loadHealthData(afterCallback: () -> Unit) = viewModelScope.launch {
         readSteps()
@@ -39,10 +39,10 @@ class MainViewModel : ViewModel() {
 
     fun dumpHealthData() = viewModelScope.launch {
         deleteSteps()
-        updateSteps()
+        //updateSteps()
         insertSteps()
         tempHealthData.stepsRecords.clear()
-        idsToUpdate.clear()
+        //idsToUpdate.clear()
         idsToDelete.clear()
     }
 
@@ -71,7 +71,8 @@ class MainViewModel : ViewModel() {
 
     private suspend fun insertSteps() {
         try {
-            healthConnectClient!!.insertRecords(tempHealthData.stepsRecords.filter { it.recordId == null }.map {
+            val recordsToInsert = tempHealthData.stepsRecords.filter { it.recordId == null }
+            val response = healthConnectClient!!.insertRecords(recordsToInsert.map {
                 StepsRecord(
                     count = it.stepsNumber,
                     startTime = it.date.toInstant(),
@@ -80,22 +81,9 @@ class MainViewModel : ViewModel() {
                     endZoneOffset = ZoneOffset.UTC
                 )
             })
-        } catch (e: Exception) {
-            //...
-        }
-    }
-
-    private suspend fun updateSteps() {
-        try {
-            healthConnectClient!!.updateRecords(tempHealthData.stepsRecords.filter { idsToUpdate.contains(it.recordId) }.map {
-                StepsRecord(
-                    count = it.stepsNumber,
-                    startTime = it.date.toInstant(),
-                    endTime = it.date.toInstant().plusSeconds(1),
-                    startZoneOffset = ZoneOffset.UTC,
-                    endZoneOffset = ZoneOffset.UTC
-                )
-            })
+            for(idx in 0 until response.recordIdsList.size) {
+                recordsToInsert[idx].recordId = response.recordIdsList[idx]
+            }
         } catch (e: Exception) {
             //...
         }
@@ -112,4 +100,20 @@ class MainViewModel : ViewModel() {
             //...
         }
     }
+
+//    private suspend fun updateSteps() {
+//        try {
+//            healthConnectClient!!.updateRecords(tempHealthData.stepsRecords.filter { idsToUpdate.contains(it.recordId) }.map {
+//                StepsRecord(
+//                    count = it.stepsNumber,
+//                    startTime = it.date.toInstant(),
+//                    endTime = it.date.toInstant().plusSeconds(1),
+//                    startZoneOffset = ZoneOffset.UTC,
+//                    endZoneOffset = ZoneOffset.UTC
+//                )
+//            })
+//        } catch (e: Exception) {
+//            //...
+//        }
+//    }
 }
